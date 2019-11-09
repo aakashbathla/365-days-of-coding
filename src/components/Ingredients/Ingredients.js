@@ -72,7 +72,7 @@ const Ingredients = () => {
   useEffect(()=>{
     console.log('Rendering Ingredients',userIngredients)
   },[userIngredients])
-  const addIngredientHandler = ingredient => {
+  const addIngredientHandler = useCallback(ingredient => {
       // setIsloading(true);
       dispatchHttp({type: 'SEND'}); 
       fetch('https://react-hooks-update-daf1c.firebaseio.com/ingredients.json',{
@@ -96,7 +96,7 @@ const Ingredients = () => {
         //   ]
         // )
       })
-  }
+  },[]);
   const filteredIngredientsHandler = useCallback(filteredIngredients => {
       // setUserIngredients(filteredIngredients);
       dispatch({type: 'SET', ingredients: filteredIngredients})
