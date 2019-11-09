@@ -1,12 +1,26 @@
-import React,{useState, useEffect, useCallback} from 'react';
+import React,{useReducer, useState, useEffect, useCallback} from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
 import Search from './Search';
 import ErrorModal from '../UI/ErrorModal';
 
+const ingredientReducer = (currentIngredients, action) => {
+  switch(action.type) {
+    case 'SET':
+      return action.ingredients;
+    case 'ADD':
+      return [...currentIngredients, action.ingredient]
+    case 'DELETE':
+      return currentIngredients.filter(ing=>ing.id!==action.id);
+    default:
+      throw new Error('Should not get there');
+  }
+}
+
 const Ingredients = () => {
-  const [userIngredients,setUserIngredients] = useState([]);
+  const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
+  // const [userIngredients,setUserIngredients] = useState([]);
   const [isLoading, setIsloading] = useState(false);
   const [error, setError] = useState();
   // useEffect(()=>{
@@ -42,28 +56,31 @@ const Ingredients = () => {
         setIsloading(false);
         return response.json()
       }).then(responseData => {
-        setUserIngredients((prevIngredients)=>
-          [...prevIngredients,
-            {
-              id: responseData.name,
-              ...ingredient
-            }
-          ]
-        )
+        dispatch({type: 'ADD', ingredient: {id: responseData.name, ...ingredient}})
+        // setUserIngredients((prevIngredients)=>
+        //   [...prevIngredients,
+        //     {
+        //       id: responseData.name,
+        //       ...ingredient
+        //     }
+        //   ]
+        // )
       })
   }
   const filteredIngredientsHandler = useCallback(filteredIngredients => {
-      setUserIngredients(filteredIngredients);
+      // setUserIngredients(filteredIngredients);
+      dispatch({type: 'SET', ingredients: filteredIngredients})
   },[]);
   const removeIngredientHandler = ingredientId => {
     setIsloading(true);
-    fetch(`https://react-hooks-update-daf1c.firebaseio.com/ingredients/${ingredientId}.jon`,{
+    fetch(`https://react-hooks-update-daf1c.firebaseio.com/ingredients/${ingredientId}.json`,{
         method:'DELETE'
       }).then(response => {
         setIsloading(false);
-        setUserIngredients((prevIngredients)=>
-          prevIngredients.filter(ingredient=>ingredient.id!==ingredientId)
-        )
+        dispatch({type: 'DELETE', id: ingredientId})
+        // setUserIngredients((prevIngredients)=>
+        //   prevIngredients.filter(ingredient=>ingredient.id!==ingredientId)
+        // )
       }).catch(err => {
         setError('Something Went Wrong');
       })
