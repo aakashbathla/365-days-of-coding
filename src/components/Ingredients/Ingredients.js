@@ -1,111 +1,98 @@
-import React,{useReducer, useEffect, useCallback} from 'react';
+import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
-import Search from './Search';
 import ErrorModal from '../UI/ErrorModal';
+import Search from './Search';
 import useHttp from '../../hooks/http';
 
 const ingredientReducer = (currentIngredients, action) => {
-  switch(action.type) {
+  switch (action.type) {
     case 'SET':
       return action.ingredients;
     case 'ADD':
-      return [...currentIngredients, action.ingredient]
+      return [...currentIngredients, action.ingredient];
     case 'DELETE':
-      return currentIngredients.filter(ing=>ing.id!==action.id);
+      return currentIngredients.filter(ing => ing.id !== action.id);
     default:
-      throw new Error('Should not get there');
+      throw new Error('Should not get there!');
   }
-}
-
-
+};
 
 const Ingredients = () => {
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
-  const {isLoading, error, data, sendRequest} = useHttp();
-  // const [userIngredients,setUserIngredients] = useState([]);
-  // const [isLoading, setIsloading] = useState(false);
-  // const [error, setError] = useState();
-  // useEffect(()=>{
-  //   fetch('https://react-hooks-update-daf1c.firebaseio.com/ingredients.json',{
-      
-  //   }).then(response => {
-  //     return response.json();
-  //   }).then(responseData => {
-  //     const loadedIngredients = [];
-  //     for(const key in responseData){
-  //       loadedIngredients.push({
-  //         id: key,
-  //         title: responseData[key].title,
-  //         amount: responseData[key].amount
-  //       })
-  //     }
-  //     setUserIngredients(loadedIngredients);
-  //   })
-  // },[]);
+  const {
+    isLoading,
+    error,
+    data,
+    sendRequest,
+    reqExtra,
+    reqIdentifer,
+    clear
+  } = useHttp();
 
-  useEffect(()=>{
-    console.log('Rendering Ingredients',userIngredients)
-  },[userIngredients])
-  const addIngredientHandler = useCallback(ingredient => {
-      // setIsloading(true);
-      // dispatchHttp({type: 'SEND'}); 
-      // fetch('https://react-hooks-update-daf1c.firebaseio.com/ingredients.json',{
-      //   method:'POST',
-      //   body: JSON.stringify(ingredient),
-      //   headers: {
-      //     'Content-Type':'application/json'
-      //   }
-      // }).then(response=>{
-      //   // setIsloading(false);
-      //   dispatchHttp({type: 'RESPONSE'}); 
-      //   return response.json()
-      // }).then(responseData => {
-      //   dispatch({type: 'ADD', ingredient: {id: responseData.name, ...ingredient}})
-      //   // setUserIngredients((prevIngredients)=>
-      //   //   [...prevIngredients,
-      //   //     {
-      //   //       id: responseData.name,
-      //   //       ...ingredient
-      //   //     }
-      //   //   ]
-      //   // )
-      // })
-  },[]);
+  useEffect(() => {
+    if (!isLoading && !error && reqIdentifer === 'REMOVE_INGREDIENT') {
+      dispatch({ type: 'DELETE', id: reqExtra });
+    } else if (!isLoading && !error && reqIdentifer === 'ADD_INGREDIENT') {
+      dispatch({
+        type: 'ADD',
+        ingredient: { id: data.name, ...reqExtra }
+      });
+    }
+  }, [data, reqExtra, reqIdentifer, isLoading, error]);
+
   const filteredIngredientsHandler = useCallback(filteredIngredients => {
-      // setUserIngredients(filteredIngredients);
-      dispatch({type: 'SET', ingredients: filteredIngredients})
-  },[]);
-  const removeIngredientHandler = useCallback(ingredientId => {
-    sendRequest(`https://react-hooks-update-daf1c.firebaseio.com/ingredients/${ingredientId}.json`, 'DELETE')
-    // setIsloading(true);
-    // dispatchHttp({type: 'SEND'}); 
-  },[sendRequest]);
-  const clearError = useCallback(() => {
-    // setError(null);
-    // setIsloading(false);
-    // dispatchHttp({
-    //   type: 'CLEAR'
-    // })
-  },[]);
+    dispatch({ type: 'SET', ingredients: filteredIngredients });
+  }, []);
+
+  const addIngredientHandler = useCallback(ingredient => {
+    sendRequest(
+      'https://react-hooks-update-daf1c.firebaseio.com/ingredients.json',
+      'POST',
+      JSON.stringify(ingredient),
+      ingredient,
+      'ADD_INGREDIENT'
+    );
+  }, [sendRequest]);
+
+  const removeIngredientHandler = useCallback(
+    ingredientId => {
+      sendRequest(
+        `https://react-hooks-update-daf1c.firebaseio.com/ingredients/${ingredientId}.json`,
+        'DELETE',
+        null,
+        ingredientId,
+        'REMOVE_INGREDIENT'
+      );
+    },
+    [sendRequest]
+  );
+
+  const ingredientList = useMemo(() => {
+    return (
+      <IngredientList
+        ingredients={userIngredients}
+        onRemoveItem={removeIngredientHandler}
+      />
+    );
+  }, [userIngredients, removeIngredientHandler]);
+
   return (
     <div className="App">
-      {error && <ErrorModal onClose={clearError}>
-        {error}
-      </ErrorModal>}
-      <IngredientForm onAddIngredient={addIngredientHandler} loading={isLoading}/>
+      {error && <ErrorModal onClose={clear}>{error}</ErrorModal>}
+
+      <IngredientForm
+        onAddIngredient={addIngredientHandler}
+        loading={isLoading}
+      />
 
       <section>
-        <Search onLoadIngredients={filteredIngredientsHandler}/>
-        <IngredientList ingredients = {userIngredients} onRemoveItem={removeIngredientHandler}/>
+        <Search onLoadIngredients={filteredIngredientsHandler} />
+        {ingredientList}
       </section>
     </div>
   );
-}
+};
 
 export default Ingredients;
-
-//useEffect method is similar to componentDidUpdate
-//but when we pass empty array to useEffect Method it behaves 
-//as componentDidMount
